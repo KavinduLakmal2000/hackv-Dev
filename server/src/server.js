@@ -11,11 +11,14 @@ import { createServer } from 'http';
 import { connectDB } from './config/database.js';
 import passport from './config/passport.js';
 import { initSocketServer } from './sockets/index.js';
-import authRoutes   from './routes/auth.js';
-import userRoutes   from './routes/users.js';
-import adminRoutes  from './routes/admin.js';
-import lobbyRoutes  from './routes/lobbies.js';
-import gameRoutes   from './routes/game.js';
+import { maintenanceGuard, registrationGuard, matchmakingGuard, shopGuard } from './middleware/maintenance.js';
+import authRoutes        from './routes/auth.js';
+import userRoutes        from './routes/users.js';
+import adminRoutes       from './routes/admin.js';
+import lobbyRoutes       from './routes/lobbies.js';
+import gameRoutes        from './routes/game.js';
+import shopRoutes        from './routes/shop.js';
+import adminConfigRoutes from './routes/adminConfig.js';
 import { serverError } from './utils/apiResponse.js';
 
 const app  = express();
@@ -58,6 +61,11 @@ app.use(
   })
 );
 
+// ── CRITICAL: Shop webhook route (raw body) must come BEFORE express.json() ──
+// Stripe signature verification requires the raw, unparsed Buffer.
+// The route itself handles raw parsing for /webhook/stripe only.
+app.use('/api/shop', shopRoutes);
+
 // ── Body parsing ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }));         // reject huge payloads
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
@@ -95,12 +103,19 @@ app.use('/api/auth/forgot-password', authLimiter);
 // ── Passport (OAuth only — no sessions) ──────────────────────────────────────
 app.use(passport.initialize());
 
+// ── Maintenance guard (runs on every /api request after body parsing) ─────────
+app.use('/api', maintenanceGuard);
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',    authRoutes);
+app.use('/api/auth/register', registrationGuard); // blocks new signups when closed
 app.use('/api/users',   userRoutes);
 app.use('/api/admin',   adminRoutes);
-app.use('/api/lobbies', lobbyRoutes);
+app.use('/api/lobbies', matchmakingGuard, lobbyRoutes);
 app.use('/api/game',    gameRoutes);
+// /api/shop already registered above (before JSON parser for Stripe webhook)
+app.use('/api/shop',    shopGuard);               // blocks shop when closed (except webhook)
+app.use('/api',         adminConfigRoutes);       // /api/config, /api/mail, /api/admin/...
 
 // Health check
 app.get('/api/health', (_req, res) => {

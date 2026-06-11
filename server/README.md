@@ -67,3 +67,66 @@ POST /api/game/:sessionId/round/expire → admin/timer ends a round
 config/tools.jsFull tools catalog — 7 defense, 9 attack tools across 3 tiersmodels/GameSession.jsComplete game state schema — rounds, player states, attack logutils/gameEngine.jsPure combat logic — deploy, attack, win conditions, side-switchcontrollers/gameController.jsAll game actions wired to DB and Socket.ioroutes/game.jsAll /api/game/* endpointsvalidators/game.jsZod schemas for all game actions
 
 
+# Complete real-time event map
+Lobby room (lobby:{code})
+Client → Server                   Server → Client
+─────────────────────────────     ──────────────────────────────────
+lobby:join   { code }         →   lobby:player_joined  (REST triggers)
+lobby:leave  { code }         →   lobby:player_left    (REST triggers)
+lobby:chat   { code, msg }    →   lobby:chat           { user, msg, ts }
+lobby:ping                    →   lobby:presence       { userId, online }
+                                  lobby:settings_updated
+                                  lobby:game_starting
+Game room (game:{sessionId})
+Client → Server                   Server → Developers      Server → Hackers
+─────────────────────────         ────────────────────      ─────────────────────
+game:join  { sessionId }      →   game:round_started        game:round_started
+game:start_round              →   (role-filtered state)      (role-filtered state)
+game:deploy  { toolId }       →   game:tool_deployed        game:defense_added ←(no tool name)
+game:attack  { toolId }       →   game:attack_incoming      game:attack_result
+game:set_secret_word          →   game:secret_word_confirmed game:secret_word_set ←(no word)
+game:guess   { guess }        →   game:round_finished        game:letters_revealed
+game:chat    { msg }          →   game:chat (team-only)      game:chat (team-only)
+game:request_state            →   game:tick  { remaining }   game:tick
+                                  game:timer_warning         game:timer_warning
+                                  game:switching_sides       game:switching_sides
+                                  game:finished              game:finished
+
+
+# Full Shop API
+
+GET  /api/shop/catalog              → full catalog (public, ownership flags if authed)
+POST /api/shop/buy                  → buy item with premium tokens
+POST /api/shop/checkout             → create Stripe session (real money)
+GET  /api/shop/checkout/verify      → confirm payment after Stripe redirect
+POST /api/shop/webhook/stripe       → Stripe webhook (raw body, no JWT)
+GET  /api/shop/inventory            → my owned items + equipped status
+POST /api/shop/equip                → equip an owned item
+POST /api/shop/unequip              → remove item from slot
+GET  /api/shop/purchases            → my purchase history
+POST /api/shop/admin/grant          → admin grants item to player
+
+FilePurposeconfig/shopCatalog.jsFull item catalog — 25 items across 8 types, server-side pricescontrollers/shopController.jsAll shop actions including Stripe webhookroutes/shop.jsAll /api/shop/* endpointsmodels/Purchase.jsImmutable transaction ledgervalidators/shop.jsZod schemas for all shop actions
+
+# Public (client bootstrap)
+GET  /api/config                      → maintenance status, announcement, season
+
+# Player mailbox
+GET  /api/mail                        → inbox (personal + broadcasts)
+GET  /api/mail/:mailId                → read mail (marks as read)
+POST /api/mail/:mailId/claim          → claim credits/tokens/item reward
+DEL  /api/mail/:mailId                → delete personal mail
+
+# Admin mail
+POST /api/admin/mail/broadcast        → send to all players (tier filter, reward, schedule)
+POST /api/admin/mail/personal         → send to one player
+GET  /api/admin/mail                  → list all sent mails
+DEL  /api/admin/mail/:mailId          → delete a mail
+
+# Admin config
+GET  /api/admin/config                → full server config
+PATCH /api/admin/config               → toggle maintenance / shop / matchmaking / announcement
+GET  /api/admin/dashboard             → users + games + revenue + top players
+
+
+FilePurposeutils/emailService.jsNodemailer transport + 6 branded HTML email templatesmodels/Mail.jsIn-game mailbox schema — broadcasts, personal, rewardsmodels/MaintenanceConfig.jsSingleton server config — maintenance, shop, matchmaking flagsmiddleware/maintenance.jsRequest guard with 30s cache — blocks all non-admin trafficcontrollers/mailController.jsInbox, read, claim reward, admin send/broadcastcontrollers/adminConfigController.jsConfig get/set, full dashboard aggregationroutes/adminConfig.jsAll /api/mail/*, /api/config, /api/admin/config, /api/admin/dashboardvalidators/admin.jsZod schemas for mail and config
