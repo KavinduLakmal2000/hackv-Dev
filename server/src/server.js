@@ -64,6 +64,7 @@ app.use(
 // ── CRITICAL: Shop webhook route (raw body) must come BEFORE express.json() ──
 // Stripe signature verification requires the raw, unparsed Buffer.
 // The route itself handles raw parsing for /webhook/stripe only.
+app.use('/api/shop',    shopGuard);               // blocks shop when closed (except webhook)
 app.use('/api/shop', shopRoutes);
 
 // ── Body parsing ──────────────────────────────────────────────────────────────
@@ -107,14 +108,14 @@ app.use(passport.initialize());
 app.use('/api', maintenanceGuard);
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/auth',    authRoutes);
-app.use('/api/auth/register', registrationGuard); // blocks new signups when closed
+
+app.use('/api/auth', authRoutes);
+app.use('/api/auth/register', registrationGuard);
 app.use('/api/users',   userRoutes);
 app.use('/api/admin',   adminRoutes);
 app.use('/api/lobbies', matchmakingGuard, lobbyRoutes);
 app.use('/api/game',    gameRoutes);
 // /api/shop already registered above (before JSON parser for Stripe webhook)
-app.use('/api/shop',    shopGuard);               // blocks shop when closed (except webhook)
 app.use('/api',         adminConfigRoutes);       // /api/config, /api/mail, /api/admin/...
 
 // Health check
