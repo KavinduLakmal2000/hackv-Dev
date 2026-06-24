@@ -10,7 +10,11 @@ import {
   ForgotPasswordPage,
   ResetPasswordPage,
 } from './pages/auth/ForgotResetPage.jsx';
-import LobbyPlaceholderPage from './pages/lobby/LobbyPlaceholderPage.jsx';
+import LobbyBrowserPage    from './pages/lobby/LobbyBrowserPage.jsx';
+import LobbyRoomPage       from './pages/lobby/LobbyRoomPage.jsx';
+import MyProfilePage       from './pages/profile/MyProfilePage.jsx';
+import PublicProfilePage   from './pages/profile/PublicProfilePage.jsx';
+import LeaderboardPage     from './pages/profile/LeaderboardPage.jsx';
 
 import { RequireAuth, RequireGuest } from './components/layout/RouteGuard.jsx';
 import { Spinner } from './components/ui/Terminal.jsx';
@@ -59,7 +63,19 @@ const App = () => {
 
         {/* ── Protected routes ── */}
         <Route path="/lobby" element={
-          <RequireAuth><LobbyPlaceholderPage /></RequireAuth>
+          <RequireAuth><LobbyBrowserPage /></RequireAuth>
+        } />
+        <Route path="/lobby/:code" element={
+          <RequireAuth><LobbyRoomPage /></RequireAuth>
+        } />
+        <Route path="/profile" element={
+          <RequireAuth><MyProfilePage /></RequireAuth>
+        } />
+        <Route path="/profile/:username" element={
+          <RequireAuth><PublicProfilePage /></RequireAuth>
+        } />
+        <Route path="/leaderboard" element={
+          <RequireAuth><LeaderboardPage /></RequireAuth>
         } />
 
         {/* ── Fallbacks ── */}
