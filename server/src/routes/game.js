@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as gameController from '../controllers/gameController.js';
 import { verifyJWT } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/auth.js';
+import { requireEmailVerified } from '../middleware/requireEmailVerified.js';
 import {
   validate,
   deployToolSchema,
@@ -14,6 +15,10 @@ const router = Router();
 
 // All game routes require authentication
 router.use(verifyJWT);
+router.use((req, res, next) => {
+  if (req.method === 'GET') return next();
+  return requireEmailVerified(req, res, next);
+});
 
 // ── Session management ────────────────────────────────────────────────────────
 

@@ -5,6 +5,7 @@ import Purchase from '../models/Purchase.js';
 import { bustMaintenanceCache } from '../middleware/maintenance.js';
 import { timerManager } from '../utils/timerManager.js';
 import { sendMaintenanceAlert } from '../utils/emailService.js';
+import { writeAuditLog } from '../utils/auditLogger.js';
 import {
   ok, badRequest, serverError,
 } from '../utils/apiResponse.js';
@@ -54,6 +55,15 @@ export const updateConfig = async (req, res) => {
         type:    config.announcement.type,
       });
     }
+
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'update_config',
+      before: { maintenanceMode: config.maintenanceMode, registrationOpen: config.registrationOpen, matchmakingOpen: config.matchmakingOpen, shopOpen: config.shopOpen },
+      after: { maintenanceMode: config.maintenanceMode, registrationOpen: config.registrationOpen, matchmakingOpen: config.matchmakingOpen, shopOpen: config.shopOpen },
+      ip: req.ip,
+      meta: { updates: Object.keys(updates) },
+    });
 
     console.log(`[Admin] Config updated by ${req.user.username}:`, Object.keys(updates));
     return ok(res, { config }, 'Config updated');

@@ -40,8 +40,12 @@ export const register = async (req, res) => {
       User.exists({ username }),
     ]);
 
-    if (emailTaken)    return conflict(res, 'Email already in use');
-    if (usernameTaken) return conflict(res, 'Username already taken');
+    if (emailTaken && usernameTaken) {
+      return conflict(res, 'Email already in use');
+    }
+    if (emailTaken || usernameTaken) {
+      return created(res, null, 'Check your email — if it is new, you will be registered. If not, try logging in.');
+    }
 
     // Create user — passwordHash field triggers the pre-save bcrypt hook
     const user = new User({
@@ -89,10 +93,22 @@ export const login = async (req, res) => {
       return unauthorized(res, user.isBanned ? `Account banned: ${user.banReason}` : 'Account inactive');
     }
 
-    const valid = await user.comparePassword(password);
-    if (!valid) return unauthorized(res, GENERIC_ERR);
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      return unauthorized(res, 'Account temporarily locked. Try again later.');
+    }
 
-    // Update last login metadata
+    const valid = await user.comparePassword(password);
+    if (!valid) {
+      user.loginAttempts = (user.loginAttempts || 0) + 1;
+      if (user.loginAttempts >= 10) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+      }
+      await user.save();
+      return unauthorized(res, GENERIC_ERR);
+    }
+
+    user.loginAttempts = 0;
+    user.lockUntil = null;
     user.lastLoginAt = new Date();
     user.lastLoginIp = req.ip;
     await user.save();
@@ -120,11 +136,9 @@ export const googleCallback = async (req, res) => {
     const user = await User.findById(req.user._id).select('+refreshTokenVersion');
     const accessToken = issueTokens(res, user);
 
-    // Redirect to client with token in URL fragment (never in query string)
-    // Client reads it once, stores in memory, clears the URL
-    return res.redirect(
-      `${process.env.CLIENT_URL}/auth/callback#token=${accessToken}`
-    );
+    // Redirect to client without exposing the access token in the URL.
+    // The refresh cookie is set by issueTokens and the client boots via refresh/me.
+    return res.redirect(`${process.env.CLIENT_URL}/auth/callback`);
   } catch (err) {
     console.error('[googleCallback]', err);
     return res.redirect(`${process.env.CLIENT_URL}/auth/error?reason=server_error`);

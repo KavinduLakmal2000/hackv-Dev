@@ -11,7 +11,9 @@ import { createServer } from 'http';
 import { connectDB } from './config/database.js';
 import passport from './config/passport.js';
 import { initSocketServer } from './sockets/index.js';
-import { maintenanceGuard, registrationGuard, matchmakingGuard, shopGuard } from './middleware/maintenance.js';
+import { maintenanceGuard, matchmakingGuard, shopGuard } from './middleware/maintenance.js';
+import { sanitizeInput } from './middleware/sanitize.js';
+import { requestIdMiddleware } from './middleware/requestId.js';
 import authRoutes        from './routes/auth.js';
 import userRoutes        from './routes/users.js';
 import adminRoutes       from './routes/admin.js';
@@ -20,9 +22,12 @@ import gameRoutes        from './routes/game.js';
 import shopRoutes        from './routes/shop.js';
 import adminConfigRoutes from './routes/adminConfig.js';
 import { serverError } from './utils/apiResponse.js';
+import { validateEnv } from './utils/validateEnv.js';
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
+
+app.use(requestIdMiddleware);
 
 // ── Trust proxy (needed behind nginx / Railway / Render) ──────────────────────
 app.set('trust proxy', 1);
@@ -71,6 +76,7 @@ app.use('/api/shop', shopRoutes);
 app.use(express.json({ limit: '10kb' }));         // reject huge payloads
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
+app.use(sanitizeInput);
 
 // ── NoSQL injection sanitization ──────────────────────────────────────────────
 app.use(mongoSanitize());
@@ -110,7 +116,6 @@ app.use('/api', maintenanceGuard);
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 app.use('/api/auth', authRoutes);
-app.use('/api/auth/register', registrationGuard);
 app.use('/api/users',   userRoutes);
 app.use('/api/admin',   adminRoutes);
 app.use('/api/lobbies', matchmakingGuard, lobbyRoutes);
@@ -144,6 +149,7 @@ app.use((err, _req, res, _next) => {
 const httpServer = createServer(app);
 
 const start = async () => {
+  validateEnv();
   await connectDB();
 
   // ── Socket.io ───────────────────────────────────────────────────────────────

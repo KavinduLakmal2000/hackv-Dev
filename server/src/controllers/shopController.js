@@ -13,6 +13,7 @@ import {
   ok, created, badRequest, forbidden,
   notFound, conflict, serverError,
 } from '../utils/apiResponse.js';
+import { writeAuditLog } from '../utils/auditLogger.js';
 
 // Stripe is initialized lazily so missing key doesn't crash the server in dev
 let _stripe = null;
@@ -137,6 +138,16 @@ export const buyItem = async (req, res) => {
         credits:         updated.credits,
         premiumCurrency: updated.premiumCurrency,
       },
+    });
+
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'purchase_item',
+      targetId: req.user._id,
+      before: { credits: user.credits, premiumCurrency: user.premiumCurrency },
+      after: { credits: updated.credits, premiumCurrency: updated.premiumCurrency },
+      ip: req.ip,
+      meta: { itemId, itemType: item.type },
     });
 
     return ok(res, {

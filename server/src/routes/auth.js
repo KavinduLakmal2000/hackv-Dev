@@ -2,6 +2,7 @@ import { Router } from 'express';
 import passport from '../config/passport.js';
 import * as authController from '../controllers/authController.js';
 import { verifyJWT } from '../middleware/auth.js';
+import { registrationGuard } from '../middleware/maintenance.js';
 import {
   validate,
   registerSchema,
@@ -20,6 +21,7 @@ const router = Router();
  * Body: { username, email, password, displayName? }
  */
 router.post('/register',
+  registrationGuard,
   validate(registerSchema),
   authController.register
 );

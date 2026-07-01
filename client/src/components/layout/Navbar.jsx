@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore.js';
+import useShopStore from '../../store/shopStore.js';
+import useMailStore from '../../store/mailStore.js';
 import RankBadge from '../ui/RankBadge.jsx';
+import WalletDisplay from '../ui/WalletDisplay.jsx';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Navbar — persistent top bar for all authenticated pages.
@@ -16,9 +19,16 @@ const NAV_LINKS = [
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuthStore();
+  const { wallet, fetchCatalog } = useShopStore();
+  const { unreadCount, fetchInbox } = useMailStore();
   const navigate  = useNavigate();
   const location  = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Lightweight wallet fetch so credits/tokens are visible everywhere,
+  // not just on the shop page. fetchCatalog also returns wallet.
+  useEffect(() => { fetchCatalog(); }, [fetchCatalog]);
+  useEffect(() => { fetchInbox({ unread: true, limit: 1 }); }, [fetchInbox]);
 
   const handleLogout = async () => {
     await logout();
@@ -69,9 +79,17 @@ const Navbar = () => {
                 borderBottom: active ? '2px solid var(--green-bright)' : '2px solid transparent',
                 textDecoration: 'none',
                 transition:   'color var(--transition)',
+                position:     'relative',
               }}
             >
               {link.label}
+              {link.to === '/mail' && unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: '4px', right: '2px',
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  background: 'var(--red-bright)', boxShadow: '0 0 6px var(--red-bright)',
+                }} />
+              )}
             </Link>
           );
         })}
@@ -93,6 +111,9 @@ const Navbar = () => {
           </Link>
         )}
       </div>
+
+      {/* Wallet */}
+      <WalletDisplay wallet={wallet} size="sm" />
 
       {/* User menu */}
       <div style={{ position: 'relative', flexShrink: 0 }}>

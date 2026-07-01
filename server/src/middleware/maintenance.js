@@ -36,12 +36,12 @@ export const maintenanceGuard = async (req, res, next) => {
     if (!config.maintenanceMode?.enabled) return next();
 
     // Always allow health check through
-    if (req.path === '/api/health') return next();
+    if (req.path === '/health') return next();
 
     // Auth endpoints allowed — users need to be able to log in as admin
-    if (req.path.startsWith('/api/auth/login') ||
-        req.path.startsWith('/api/auth/refresh') ||
-        req.path.startsWith('/api/auth/google')) {
+    if (req.path.startsWith('/auth/login') ||
+        req.path.startsWith('/auth/refresh') ||
+        req.path.startsWith('/auth/google')) {
       return next();
     }
 

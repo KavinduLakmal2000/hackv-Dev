@@ -7,6 +7,7 @@ import {
   serverError,
 } from '../utils/apiResponse.js';
 import { applyRankDelta, getTierForPoints } from '../utils/rank.js';
+import { writeAuditLog } from '../utils/auditLogger.js';
 
 // ── listUsers ─────────────────────────────────────────────────────────────────
 // Paginated, searchable, filterable user list for admin
@@ -105,7 +106,18 @@ export const updateUser = async (req, res) => {
       }
     }
 
+    const before = user.toObject();
     await user.save();
+
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'update_user',
+      targetId: user._id,
+      before,
+      after: user.toObject(),
+      ip: req.ip,
+      meta: { role, isActive, isBanned, credits, premiumCurrency },
+    });
 
     return ok(res, { user: user.toSafeObject() }, 'User updated');
   } catch (err) {
@@ -134,7 +146,18 @@ export const banUser = async (req, res) => {
     user.banReason            = reason || 'Policy violation';
     user.refreshTokenVersion += 1; // kill sessions instantly
 
+    const before = user.toObject();
     await user.save();
+
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'ban_user',
+      targetId: user._id,
+      before,
+      after: user.toObject(),
+      ip: req.ip,
+      meta: { reason },
+    });
 
     return ok(res, null, `User ${user.username} has been banned`);
   } catch (err) {
@@ -151,7 +174,18 @@ export const unbanUser = async (req, res) => {
 
     user.isBanned  = false;
     user.banReason = null;
+    const before = user.toObject();
     await user.save();
+
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'unban_user',
+      targetId: user._id,
+      before,
+      after: user.toObject(),
+      ip: req.ip,
+      meta: {},
+    });
 
     return ok(res, null, `User ${user.username} has been unbanned`);
   } catch (err) {
@@ -172,7 +206,18 @@ export const adjustRank = async (req, res) => {
     const before  = { ...user.rank.toObject() };
     user.rank     = applyRankDelta(user.rank, points);
 
+    const before = user.toObject();
     await user.save();
+
+    await writeAuditLog({
+      adminId: req.user._id,
+      action: 'adjust_rank',
+      targetId: user._id,
+      before,
+      after: user.toObject(),
+      ip: req.ip,
+      meta: { points, reason },
+    });
 
     console.log(
       `[adminAdjustRank] Admin ${req.user.username} adjusted rank for ${user.username}:`,

@@ -7,6 +7,7 @@ import {
   ok, created, badRequest, forbidden,
   notFound, conflict, serverError,
 } from '../utils/apiResponse.js';
+import { writeAuditLog } from '../utils/auditLogger.js';
 
 // ── sendBroadcast ─────────────────────────────────────────────────────────────
 // Admin sends a message to ALL players (or a filtered tier subset)
@@ -38,6 +39,15 @@ export const sendBroadcast = async (req, res) => {
         console.error('[sendBroadcast] Email delivery error:', err)
       );
     }
+
+    await writeAuditLog({
+      adminId: admin._id,
+      action: 'send_broadcast',
+      before: null,
+      after: { subject, targetTier: targetTier ?? null },
+      ip: req.ip,
+      meta: { priority, reward: reward ?? {} },
+    });
 
     return created(res, { mail }, `Broadcast "${subject}" queued`);
   } catch (err) {
@@ -103,6 +113,16 @@ export const sendPersonalMail = async (req, res) => {
         hasReward: !!hasReward,
       });
     }
+
+    await writeAuditLog({
+      adminId: admin._id,
+      action: 'send_mail',
+      targetId: recipient._id,
+      before: null,
+      after: { subject, recipientId },
+      ip: req.ip,
+      meta: { priority, reward: reward ?? {} },
+    });
 
     return created(res, { mail }, `Mail sent to ${recipient.username}`);
   } catch (err) {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as lobbyController from '../controllers/lobbyController.js';
 import { verifyJWT, optionalJWT } from '../middleware/auth.js';
+import { requireEmailVerified } from '../middleware/requireEmailVerified.js';
 import {
   validate,
   validateQuery,
@@ -53,6 +54,7 @@ router.get('/me/current',
  */
 router.post('/',
   verifyJWT,
+  requireEmailVerified,
   validate(createLobbySchema),
   lobbyController.createLobby
 );
@@ -64,6 +66,7 @@ router.post('/',
  */
 router.post('/:code/join',
   verifyJWT,
+  requireEmailVerified,
   validate(joinLobbySchema),
   lobbyController.joinLobby
 );
