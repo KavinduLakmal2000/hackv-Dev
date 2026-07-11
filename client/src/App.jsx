@@ -24,11 +24,13 @@ import ServerConfigPage    from './pages/admin/ServerConfigPage.jsx';
 import MyProfilePage       from './pages/profile/MyProfilePage.jsx';
 import PublicProfilePage   from './pages/profile/PublicProfilePage.jsx';
 import LeaderboardPage     from './pages/profile/LeaderboardPage.jsx';
+import NotFoundPage        from './pages/NotFoundPage.jsx';
 
 import { RequireAuth, RequireGuest, RequireAdmin } from './components/layout/RouteGuard.jsx';
+import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
 import { Spinner } from './components/ui/Terminal.jsx';
 
-import './theme/terminal.css';
+// Note: terminal.css is imported in main.jsx — not here to avoid double import
 
 const App = () => {
   const { initialize, isReady } = useAuthStore();
@@ -67,58 +69,59 @@ const App = () => {
           <RequireGuest><ResetPasswordPage /></RequireGuest>
         } />
 
-        {/* OAuth callback — must be accessible regardless of guest/auth state */}
+        {/* OAuth callback — accessible regardless of guest/auth state */}
         <Route path="/auth/callback" element={<OAuthCallbackPage />} />
 
-        {/* ── Protected routes ── */}
+        {/* ── Protected routes — each wrapped in its own ErrorBoundary ── */}
+        {/* A crash in one page won't take down the whole app */}
         <Route path="/lobby" element={
-          <RequireAuth><LobbyBrowserPage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><LobbyBrowserPage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/lobby/:code" element={
-          <RequireAuth><LobbyRoomPage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><LobbyRoomPage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/game/:code" element={
-          <RequireAuth><GamePage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><GamePage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/shop" element={
-          <RequireAuth><ShopPage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><ShopPage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/inventory" element={
-          <RequireAuth><InventoryPage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><InventoryPage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/shop/success" element={
-          <RequireAuth><CheckoutSuccessPage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><CheckoutSuccessPage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/profile" element={
-          <RequireAuth><MyProfilePage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><MyProfilePage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/profile/:username" element={
-          <RequireAuth><PublicProfilePage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><PublicProfilePage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/leaderboard" element={
-          <RequireAuth><LeaderboardPage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><LeaderboardPage /></ErrorBoundary></RequireAuth>
         } />
         <Route path="/mail" element={
-          <RequireAuth><InboxPage /></RequireAuth>
+          <RequireAuth><ErrorBoundary><InboxPage /></ErrorBoundary></RequireAuth>
         } />
 
         {/* ── Admin routes (admin role required) ── */}
         <Route path="/admin" element={
-          <RequireAdmin><AdminDashboard /></RequireAdmin>
+          <RequireAdmin><ErrorBoundary><AdminDashboard /></ErrorBoundary></RequireAdmin>
         } />
         <Route path="/admin/users" element={
-          <RequireAdmin><UserManagePage /></RequireAdmin>
+          <RequireAdmin><ErrorBoundary><UserManagePage /></ErrorBoundary></RequireAdmin>
         } />
         <Route path="/admin/mail" element={
-          <RequireAdmin><MailComposePage /></RequireAdmin>
+          <RequireAdmin><ErrorBoundary><MailComposePage /></ErrorBoundary></RequireAdmin>
         } />
         <Route path="/admin/config" element={
-          <RequireAdmin><ServerConfigPage /></RequireAdmin>
+          <RequireAdmin><ErrorBoundary><ServerConfigPage /></ErrorBoundary></RequireAdmin>
         } />
 
         {/* ── Fallbacks ── */}
         <Route path="/" element={<Navigate to="/lobby" replace />} />
-        <Route path="*" element={<Navigate to="/lobby" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
