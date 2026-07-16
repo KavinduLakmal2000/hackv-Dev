@@ -166,23 +166,32 @@ export const joinLobby = async (req, res) => {
 export const leaveLobby = async (req, res) => {
   try {
     const { code } = req.params;
-    const userId   = req.user._id;
+    const userId   = req.user?._id ?? req.user?.id;
+    const normalizedUserId = userId?.toString?.() ?? null;
 
     const lobby = await Lobby.findOne({ code: code.toUpperCase() });
     if (!lobby) return notFound(res, 'Lobby not found');
 
-    const playerIdx = lobby.players.findIndex(p => p.userId.toString() === userId.toString());
-    if (playerIdx === -1) return badRequest(res, 'You are not in this lobby');
+    const playerIdx = lobby.players.findIndex((p) => {
+      const playerUserId = p.userId?.toString?.();
+      return playerUserId && playerUserId === normalizedUserId;
+    });
+
+    if (playerIdx === -1 && lobby.hostId?.toString?.() !== normalizedUserId) {
+      return ok(res, null, 'Left lobby');
+    }
 
     if (lobby.status === 'in_progress') {
       return badRequest(res, 'Cannot leave a game in progress. Use abandon instead.');
     }
 
-    const leaving = lobby.players[playerIdx];
-    lobby.players.splice(playerIdx, 1);
+    const leaving = playerIdx >= 0 ? lobby.players[playerIdx] : null;
+    if (leaving) {
+      lobby.players.splice(playerIdx, 1);
+    }
 
     // If host leaves, promote the next player
-    if (leaving.isHost && lobby.players.length > 0) {
+    if (leaving?.isHost && lobby.players.length > 0) {
       lobby.players[0].isHost = true;
       lobby.hostId = lobby.players[0].userId;
     }
@@ -192,15 +201,15 @@ export const leaveLobby = async (req, res) => {
       lobby.status = 'abandoned';
     } else {
       // Un-ready remaining players (settings may have changed)
-      lobby.players.forEach(p => { p.isReady = false; });
+      lobby.players.forEach((p) => { p.isReady = false; });
       lobby.status = 'waiting';
     }
 
     await lobby.save();
 
     emitToLobby(req, lobby.code, 'lobby:player_left', {
-      userId: userId.toString(),
-      newHostId: leaving.isHost && lobby.players.length > 0
+      userId: normalizedUserId,
+      newHostId: leaving?.isHost && lobby.players.length > 0
         ? lobby.players[0].userId.toString()
         : null,
       lobby: lobby.toJSON(),

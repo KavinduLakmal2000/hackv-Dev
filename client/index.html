@@ -6,9 +6,6 @@
     <meta name="description" content="BREACH — real-time multiplayer hacking & defense terminal game" />
 
     <!-- ── Security meta tags ─────────────────────────────────────────────── -->
-    <!-- X-Frame-Options equivalent — prevents clickjacking via iframe embed  -->
-    <meta http-equiv="X-Frame-Options" content="DENY" />
-
     <!-- No MIME sniffing — browser must respect the declared content-type    -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 
@@ -18,8 +15,7 @@
     <!--
       Content-Security-Policy is set as an HTTP header by the server (Helmet),
       which is the correct place — meta CSP cannot restrict all attack vectors.
-      This is a belt-and-suspenders fallback only.
-      Production: remove 'unsafe-inline' from style-src once Tailwind is removed.
+      This is only a lightweight fallback for local development.
     -->
     <meta http-equiv="Content-Security-Policy"
       content="
@@ -28,7 +24,7 @@
         style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src    'self' https://fonts.gstatic.com;
         img-src     'self' data: https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com;
-        connect-src 'self' ws://localhost:5000 wss://localhost:5000;
+        connect-src 'self' http://localhost:5000 https://localhost:5000 ws://localhost:5000 wss://localhost:5000 http://localhost:5173 ws://localhost:5173 wss://localhost:5173;
         frame-src   'none';
         object-src  'none';
       "

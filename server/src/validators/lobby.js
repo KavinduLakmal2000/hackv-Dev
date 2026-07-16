@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { GAME_MODES, TEAMS } from '../models/Lobby.js';
 import { validate, validateQuery } from './user.js';
 
+const optionalPassword = z.preprocess((value) => {
+  if (typeof value === 'string' && value.trim() === '') return undefined;
+  return value;
+}, z.string().trim().min(1).max(20).optional());
+
 // ── Create lobby ──────────────────────────────────────────────────────────────
 
 export const createLobbySchema = z.object({
@@ -9,12 +14,7 @@ export const createLobbySchema = z.object({
     errorMap: () => ({ message: `mode must be one of: ${GAME_MODES.join(', ')}` }),
   }).default('1v1'),
   isPrivate: z.boolean().default(false),
-  password: z
-    .string()
-    .trim()
-    .min(1)
-    .max(20)
-    .optional(),
+  password: optionalPassword,
   settings: z.object({
     roundCount:    z.number().int().min(1).max(10).default(5),
     roundDuration: z.number().int().min(60).max(300).default(120),
@@ -25,7 +25,7 @@ export const createLobbySchema = z.object({
 // ── Join lobby ────────────────────────────────────────────────────────────────
 
 export const joinLobbySchema = z.object({
-  password: z.string().trim().max(20).optional(),
+  password: optionalPassword,
 });
 
 // ── Choose team ───────────────────────────────────────────────────────────────
@@ -45,7 +45,10 @@ export const updateSettingsSchema = z.object({
     startCredits:  z.number().int().min(100).max(2000).optional(),
   }).optional(),
   isPrivate: z.boolean().optional(),
-  password:  z.string().trim().max(20).nullable().optional(),
+  password: z.preprocess((value) => {
+    if (typeof value === 'string' && value.trim() === '') return null;
+    return value;
+  }, z.string().trim().max(20).nullable().optional()),
 }).strict();
 
 // ── Public lobby list query ───────────────────────────────────────────────────

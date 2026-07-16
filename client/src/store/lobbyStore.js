@@ -71,15 +71,20 @@ const useLobbyStore = create((set, get) => ({
 
   leaveLobby: async () => {
     const code = get().currentLobby?.code;
-    if (!code) return { ok: true };
+    if (!code) {
+      set({ currentLobby: null, error: null });
+      return { ok: true };
+    }
+
     try {
       await lobbyApi.leave(code);
-      get().leaveSocketRoom(code);
-      set({ currentLobby: null });
-      return { ok: true };
     } catch (err) {
-      return { ok: false, message: err.response?.data?.message || 'Failed to leave lobby' };
+      console.warn('[lobbyStore] leaveLobby API failed, clearing local state anyway:', err?.response?.data?.message || err?.message);
     }
+
+    get().leaveSocketRoom(code);
+    set({ currentLobby: null, error: null, socketJoined: false });
+    return { ok: true };
   },
 
   // ── In-lobby actions ───────────────────────────────────────────────────────

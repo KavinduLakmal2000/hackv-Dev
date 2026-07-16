@@ -7,7 +7,6 @@ export const updateProfileSchema = z.object({
   displayName: z
     .string()
     .trim()
-    .min(1, 'Display name cannot be empty')
     .max(40, 'Display name too long')
     .optional(),
   bio: z

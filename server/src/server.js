@@ -26,6 +26,21 @@ import { validateEnv } from './utils/validateEnv.js';
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
+const clientOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+const serverOrigin = process.env.SERVER_URL || `http://localhost:${PORT}`;
+const allowedConnectSources = [
+  "'self'",
+  clientOrigin,
+  serverOrigin,
+  'http://localhost:5000',
+  'https://localhost:5000',
+  'http://localhost:5173',
+  'https://localhost:5173',
+  'ws://localhost:5000',
+  'wss://localhost:5000',
+  'ws://localhost:5173',
+  'wss://localhost:5173',
+].filter(Boolean);
 
 app.use(requestIdMiddleware);
 
@@ -42,7 +57,7 @@ app.use(
         scriptSrc:  ["'self'"],   // no inline scripts
         styleSrc:   ["'self'", "'unsafe-inline'"],
         imgSrc:     ["'self'", 'data:', 'https://lh3.googleusercontent.com'],
-        connectSrc: ["'self'", process.env.CLIENT_URL],
+        connectSrc: allowedConnectSources,
         frameSrc:   ["'none'"],
         objectSrc:  ["'none'"],
       },

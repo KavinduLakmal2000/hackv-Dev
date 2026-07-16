@@ -10,11 +10,16 @@ export const lobbyApi = {
   getMyCurrent: () =>
     api.get('/lobbies/me/current').then((r) => r.data),
 
-  create: ({ mode, isPrivate, password, settings }) =>
-    api.post('/lobbies', { mode, isPrivate, password, settings }).then((r) => r.data),
+  create: ({ mode, isPrivate, password, settings }) => {
+    const payload = { mode, isPrivate, settings };
+    if (isPrivate && password?.trim()) payload.password = password.trim();
+    return api.post('/lobbies', payload).then((r) => r.data);
+  },
 
-  join: (code, password) =>
-    api.post(`/lobbies/${code}/join`, { password }).then((r) => r.data),
+  join: (code, password) => {
+    const payload = password?.trim() ? { password: password.trim() } : {};
+    return api.post(`/lobbies/${code}/join`, payload).then((r) => r.data);
+  },
 
   leave: (code) =>
     api.post(`/lobbies/${code}/leave`).then((r) => r.data),

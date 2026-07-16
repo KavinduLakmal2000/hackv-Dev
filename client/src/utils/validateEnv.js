@@ -9,8 +9,7 @@ const REQUIRED_VARS = [
   'VITE_API_URL',
 ];
 
-// Optional but logged if missing (dev convenience)
-const OPTIONAL_VARS = [];
+const FALLBACK_API_URL = 'http://localhost:5000/api';
 
 export const validateEnv = () => {
   const missing = REQUIRED_VARS.filter(
@@ -18,7 +17,6 @@ export const validateEnv = () => {
   );
 
   if (missing.length > 0) {
-    // In production, render a user-friendly error instead of a blank page
     const msg = `Missing required environment variables: ${missing.join(', ')}\n\nCreate a .env file with these values (see .env.example).`;
 
     if (import.meta.env.PROD) {
@@ -33,11 +31,10 @@ export const validateEnv = () => {
       `;
       throw new Error(msg);
     } else {
-      // In dev, just log clearly — the fallbacks in axiosInstance.js etc. will kick in
-      console.warn('[BREACH] Missing env vars (using fallback defaults):', missing.join(', '));
+      console.info('[BREACH] Using fallback API URL:', FALLBACK_API_URL);
     }
   }
 };
 
 export const getApiUrl = () =>
-  import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  import.meta.env.VITE_API_URL || FALLBACK_API_URL;

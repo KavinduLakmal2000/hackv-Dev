@@ -203,10 +203,10 @@ export const adjustRank = async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return notFound(res, 'User not found');
 
-    const before  = { ...user.rank.toObject() };
-    user.rank     = applyRankDelta(user.rank, points);
-
+    const beforeRank = { ...user.rank.toObject() };
     const before = user.toObject();
+    user.rank = applyRankDelta(user.rank, points);
+
     await user.save();
 
     await writeAuditLog({
@@ -221,11 +221,11 @@ export const adjustRank = async (req, res) => {
 
     console.log(
       `[adminAdjustRank] Admin ${req.user.username} adjusted rank for ${user.username}:`,
-      `${before.points} → ${user.rank.points} (${points > 0 ? '+' : ''}${points}) | Reason: ${reason}`
+      `${beforeRank.points} → ${user.rank.points} (${points > 0 ? '+' : ''}${points}) | Reason: ${reason}`
     );
 
     return ok(res, {
-      before,
+      before: beforeRank,
       after: user.rank.toObject(),
       delta: points,
     }, 'Rank adjusted');
